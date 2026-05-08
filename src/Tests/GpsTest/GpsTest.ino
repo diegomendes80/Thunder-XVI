@@ -9,7 +9,7 @@ HardwareSerial GPS_Serial(1);
 #define TX_GPS 17
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   delay(1000);
 
   Serial.println("=== TESTE GPS NEO-6M ===");
@@ -28,7 +28,7 @@ void loop() {
   }
 
   // Se tiver nova localização
-  if (gps.location.isUpdated()) {
+  
     Serial.println("\n--- LOCALIZACAO ---");
 
     Serial.print("Latitude: ");
@@ -45,10 +45,7 @@ void loop() {
 
     Serial.print("Altitude (m): ");
     Serial.println(gps.altitude.meters());
-  } 
-  else {
-    Serial.println("Aguardando sinal GPS...");
-  }
+ 
 
   delay(1000);
 }

@@ -2,8 +2,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 
-// SDA => 21
-// SCL => 22
+  // SDA => 21
+  // SCL => 22
 
 Adafruit_BMP280 bmp;
 
