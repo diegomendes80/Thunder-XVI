@@ -1,9 +1,9 @@
-#include <TinyGPSPlus.h>
+  #include <TinyGPSPlus.h>
 
-TinyGPSPlus gps;
+  TinyGPSPlus gps;
 
-// UART1
-HardwareSerial GPS_Serial(1);
+  // UART1
+  HardwareSerial GPS_Serial(1);
 
 #define RX_GPS 16
 #define TX_GPS 17
