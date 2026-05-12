@@ -55,10 +55,10 @@ void resetMPU() {
 }
 
 void initMPU() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
   delay(2000);
 
-  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.begin(SDA, SCL);
   delay(1000);
 
   scanI2C();
@@ -122,13 +122,13 @@ bool isFalling(){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  float aceleracaoVertical = abs(a.acceleration.z);
+  float aceleracaoVertical = abs(a.acceleration.x);
 
   if(aceleracaoVertical > 1.96){
     lastTime = millis();
     falling = false;
   }else{
-    if(millis() - lastTime > 500){
+    if(millis() - lastTime > 100){
       falling = true;
     }
   }
