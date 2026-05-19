@@ -37,6 +37,7 @@ void setup() {
   initMPU();
   initGPS();
   initLoRa();
+  initFlash();
 
   SerialBT.begin("Receptor_ESP32"); 
   Serial.println("Bluetooth iniciado! Já pode parear no celular.");

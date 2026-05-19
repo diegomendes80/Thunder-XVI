@@ -1,4 +1,4 @@
-#include <SPI.h>
+#include <SPI.h>    
 
 // ===== PINOS (ajuste se necessário) =====
 #define FLASH_CS 33
