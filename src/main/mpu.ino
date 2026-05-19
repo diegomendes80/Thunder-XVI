@@ -5,7 +5,8 @@
 unsigned long lastTime = 0;
 bool falling;
 
-Adafruit_MPU6050 mpu;
+Adafruit_MPU6050 mpu; 
+
 
 void scanI2C() {
   Serial.println("\n--- SCAN I2C ---");
@@ -55,15 +56,13 @@ void resetMPU() {
 }
 
 void initMPU() {
-  // Serial.begin(115200);
+
   delay(2000);
 
-  Wire.begin(SDA, SCL);
-  delay(1000);
-
-  scanI2C();
+  // Wire.begin(SDA, SCL);
 
   // ===== MPU ===== esse código foi adicionado pois o módulo MPU estava dando erro de inicialização
+  scanI2C();
   resetMPU();
   testMPURaw();
 

@@ -1,4 +1,3 @@
-#include <SPI.h>
 #include <LoRa.h>
 
 // Definição dos pinos para o TRANSMISSOR
@@ -14,10 +13,8 @@
 int count=0;
 
 void initLoRa(){
-  // Serial.begin(115200);
+ 
   Serial.println("Iniciando SPI...");
-
-  SPI.begin(SCK, MOSI, MISO, csPin);
 
   Serial.println("LoRa Sender - Iniciando...");
   LoRa.setPins(csPin, resetPin, irqPin);
@@ -27,7 +24,7 @@ void initLoRa(){
     while(1);
   }
 
-  LoRa.setSpreadingFactor(9); //testando primeiro com 9. com 7 (padrão) conseguimos ~280 m
+  LoRa.setSpreadingFactor(9); //testando primeiro com 9. com 7 (padrão) conseguimos ~280 m com -108 RSSI
 
   Serial.println("LoRa Iniciado");
 }
