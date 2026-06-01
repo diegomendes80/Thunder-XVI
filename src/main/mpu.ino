@@ -67,7 +67,7 @@ void initMPU() {
   testMPURaw();
 
 
-  if (mpu.begin(0x68)) {
+  if (mpu.begin(0x68, &Wire)) {
     Serial.println("MPU6050 Iniciado");
   } else {
     Serial.println("Módulo MPU6050 Não Encontrado");

@@ -1,17 +1,29 @@
 #include <Wire.h>
 #include <SPI.h>
-#include "BluetoothSerial.h" 
+#include "BluetoothSerial.h"
 
 
 #define SDA 21
 #define SCL 22
 #define servoPin 4
-#define csPin 5         // NSS pino do chip
-#define resetPin 22     // RST
-#define irqPin 26        // DIO0 pino de interrupção
+#define csPin 5      // NSS pino do chip
+#define resetPin 14  // RST
+#define irqPin 26    // DIO0 pino de interrupção
 #define SCK 18
 #define MISO 19
 #define MOSI 23
+
+void initMPU();
+void initGPS();
+void initLoRa();
+void initBMP();  // Caso esteja em outro arquivo
+void initFlash();
+void getPosition(double v[2]);
+float getAcceleration(char axis);
+float getGyro(char axis);
+float getTemperature();
+float getPressure();
+float getAltitude();
 
 //CONFIGURAÇÕES DO BLUETOOTH:
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -30,79 +42,67 @@ float gx, gy, gz;
 
 void setup() {
   Serial.begin(115200);
+  delay(1000); 
+
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+
   Wire.begin(SDA, SCL);
-  SPI.begin(SCK, MOSI, MISO, csPin);
+  // Wire.setClock(100000); 
 
   initBMP();
   initMPU();
   initGPS();
-  initLoRa();
   initFlash();
 
-  SerialBT.begin("Receptor_ESP32"); 
+  SPI.begin(SCK, MOSI, MISO, csPin);
+  initLoRa();
+
+  // SerialBT.begin("Receptor_ESP32");
   Serial.println("Bluetooth iniciado! Já pode parear no celular.");
-
-
 }
 
 void loop() {
 
   //As variáveis são atualizadas a cada loop
-  getPosition(position); // atualiza o vetor de coordenadas 
+  getPosition(position);  // atualiza o vetor de coordenadas
   temperature = getTemperature();
   pressure = getPressure();
   altitude = getAltitude();
-  acx = getAcceleration('x'); 
-  acy = getAcceleration('y'); 
+  acx = getAcceleration('x');
+  acy = getAcceleration('y');
   acz = getAcceleration('z');
-  gx = getGyro('x'); 
-  gy = getGyro('y'); 
+  gx = getGyro('x');
+  gy = getGyro('y');
   gz = getGyro('z');
 
+  String telemetria = "====================================\n";
+  telemetria += "          THUNDER-XVI - TELEMETRIA  \n";
+  telemetria += "====================================\n";
+  telemetria += "  [AMBIENTE]\n";
+  telemetria += "  Altitude:    " + String(altitude, 2) + " m\n";
+  telemetria += "  Pressao:     " + String(pressure, 2) + " Pa\n";
+  telemetria += "  Temperatura: " + String(temperature, 1) + " C\n";
+  telemetria += "------------------------------------\n";
+  telemetria += "  [ACELEROMETRO] (m/s2)\n";
+  telemetria += "  AX: " + String(acx, 2) + " | AY: " + String(acy, 2) + " | AZ: " + String(acz, 2) + "\n";
+  telemetria += "------------------------------------\n";
+  telemetria += "  [GIROSCOPIO] (rad/s)\n";
+  telemetria += "  GX: " + String(gx, 2) + " | GY: " + String(gy, 2) + " | GZ: " + String(gz, 2) + "\n";
+  telemetria += "------------------------------------\n";
+  telemetria += "  [GPS]\n";
+  telemetria += "  Latitude:  " + String(position[0], 6) + "\n";
+  telemetria += "  Longitude: " + String(position[1], 6) + "\n";
+  telemetria += "====================================\n\n";
 
-  Serial.print("Altitude (m): "); Serial.println(altitude);
-  Serial.print("Pressure (Pa): "); Serial.println(pressure);
-  Serial.print("Temperature (°C): "); Serial.println(temperature);
-  Serial.println();
-
-  SerialBT.print("Altitude (m): "); SerialBT.println(altitude);
-  SerialBT.print("Pressure (Pa): "); SerialBT.println(pressure);
-  SerialBT.print("Temperature (°C): "); SerialBT.println(temperature);
-  SerialBT.println();
-
-  Serial.print("ax: "); Serial.println(acx);
-  Serial.print("ay: "); Serial.println(acy);
-  Serial.print("az: "); Serial.println(acz);
-  Serial.println();
-
-  SerialBT.print("ax: "); SerialBT.println(acx);
-  SerialBT.print("ay: "); SerialBT.println(acy);
-  SerialBT.print("az: "); SerialBT.println(acz);
-  SerialBT.println();
-  
-  Serial.print("gx: "); Serial.println(gx);
-  Serial.print("gy: "); Serial.println(gy);
-  Serial.print("gz: "); Serial.println(gz);
-  Serial.println();
-
-  SerialBT.print("gx: "); SerialBT.println(gx);
-  SerialBT.print("gy: "); SerialBT.println(gy);
-  SerialBT.print("gz: "); SerialBT.println(gz);
-  SerialBT.println();
+  Serial.print(telemetria);
+  // SerialBT.print(telemetria);
+  sendData(telemetria);
+  // if(isFalling()){
+  //   Serial.println("Caindo");
+  //   SerialBT.println("Caindo");
+  // }
 
 
-  Serial.print("Latitude: "); Serial.println(position[0], 6);
-  Serial.print("Longitude: "); Serial.println(position[1], 6);
-  SerialBT.print("Latitude: "); SerialBT.println(position[0], 6);
-  SerialBT.print("Longitude: "); SerialBT.println(position[1], 6);
-
-
-  if(isFalling()){
-    Serial.println("Caindo");
-    SerialBT.println("Caindo");
-  }
-
-
-  delay(50);
-
+  delay(200);
 }

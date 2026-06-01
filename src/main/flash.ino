@@ -98,4 +98,3 @@ void initFlash(){
     Serial.println("ERRO NA FLASH");
   }
 }
-}
