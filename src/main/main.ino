@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include "BluetoothSerial.h"
-
+#include <ESP32Servo.h>
 
 #define SDA 21
 #define SCL 22
@@ -31,6 +31,7 @@ float getAltitude();
 #endif
 
 BluetoothSerial SerialBT;
+Servo servo;
 
 
 //VARIAVEIS ------:
@@ -58,12 +59,15 @@ void setup() {
   SPI.begin(SCK, MOSI, MISO, csPin);
   initLoRa();
 
+  servo.attach(4);
+
   // SerialBT.begin("Receptor_ESP32");
   Serial.println("Bluetooth iniciado! Já pode parear no celular.");
 }
 
 void loop() {
-
+  // delay(100);
+  // servo.write(180);
   //As variáveis são atualizadas a cada loop
   getPosition(position);  // atualiza o vetor de coordenadas
   temperature = getTemperature();
@@ -105,4 +109,5 @@ void loop() {
 
 
   delay(200);
+  // servo.write(0);
 }
