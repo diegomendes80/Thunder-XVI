@@ -3,99 +3,213 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-// Configurações da rede Wi-Fi que o ESP32 vai criar
 const char* ssid = "Thunder_XVI_Painel";
-const char* password = "thunderrocket"; // Mínimo 8 caracteres
+const char* password = "thunderrocket"; 
 
 WebServer server(80);
 
-// Definição dos pinos do RECEPTOR (Atualizados e soldados)
 const int csPin = 5;          
 const int resetPin = 22;      
 const int irqPin = 32;    
 int count = 0;     
 
-// Variáveis Globais para o Servidor Web acessar os dados atualizados
 String alt = "0.0", pres = "0.0", temp = "0.0";
 String ax = "0.0", ay = "0.0", az = "0.0";
 String ogx = "0.0", ogy = "0.0", ogz = "0.0";
 String lat = "0.000000", lon = "0.000000";
 String lora_rssi = "0";
 
-// --- CÓDIGO INTERNO DA PÁGINA WEB (HTML + CSS + JAVASCRIPT) ---
+// --- INTERFACE RESPONSIVA V3.2 (RESPONSIVA + TARA DA ALTITUDE) ---
 const char HTML_DASHBOARD[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="utf-8">
-    <title>THUNDER-XVI Telemetria</title>
+    <title>THUNDER-XVI Telemetry Core v3.2</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 15px; }
-        .header { text-align: center; padding: 10px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
-        .header h1 { margin: 0; color: #38bdf8; font-size: 24px; letter-spacing: 1px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
-        .card h2 { margin-top: 0; font-size: 16px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 5px; text-transform: uppercase; }
-        .data-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 18px; }
-        .label { color: #cbd5e1; }
-        .value { font-weight: bold; color: #f1f5f9; }
-        .highlight { color: #4ade80; }
-        .highlight-blue { color: #38bdf8; }
-        .footer { display: flex; justify-content: space-between; margin-top: 15px; background-color: #111827; padding: 10px; border-radius: 6px; font-size: 14px; color: #64748b; }
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #131a2b;
+            --border-color: #1e2942;
+            --text-muted: #64748b;
+            --text-light: #f8fafc;
+            --neon-blue: #38bdf8;
+            --neon-green: #10b981;
+            --neon-amber: #f59e0b;
+        }
+        
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-main); color: var(--text-light); margin: 0; padding: 20px; box-sizing: border-box; }
+        *, *:before, *:after { box-sizing: inherit; }
+
+        /* Barra Superior Responsiva */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; background-color: var(--bg-card); border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 20px; gap: 15px; }
+        .top-bar h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 1.5px; color: var(--text-light); }
+        .top-bar h1 span { color: var(--neon-blue); }
+        
+        .status-container { display: flex; align-items: center; gap: 15px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .status-item { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .pulse-dot { width: 8px; height: 8px; background-color: var(--neon-green); border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+        /* Grid Principal Dinâmico */
+        .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* Cartões e Alinhamentos */
+        .panel-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
+        .card-header h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); border-left: 3px solid var(--neon-blue); padding-left: 10px; }
+        
+        /* Botão Técnico de Tara */
+        .tare-button { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-light); padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; letter-spacing: 0.5px; text-transform: uppercase; }
+        .tare-button:hover { border-color: var(--neon-amber); color: var(--neon-amber); background: rgba(245, 158, 11, 0.03); }
+        .tare-button:active { transform: scale(0.96); }
+
+        /* Display Massivo de Altitude */
+        .primary-display { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 10px; background: rgba(56, 189, 248, 0.02); border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.15); margin-bottom: 5px; }
+        .primary-value { font-size: 54px; font-weight: 800; color: var(--neon-blue); font-variant-numeric: tabular-nums; line-height: 1; text-shadow: 0 0 20px rgba(56, 189, 248, 0.1); }
+        .primary-unit { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-top: 8px; letter-spacing: 1px; }
+
+        /* Linhas de Dados */
+        .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(30, 41, 66, 0.4); }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { font-size: 14px; color: var(--text-muted); }
+        .metric-value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        
+        /* Grades Internas de Eixos (X, Y, Z) */
+        .vector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
+        .vector-box { background: rgba(11, 15, 25, 0.4); padding: 12px 8px; border-radius: 6px; text-align: center; border: 1px solid rgba(30, 41, 66, 0.6); }
+        .vector-axis { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: bold; }
+        .vector-num { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* Subgrid de GPS */
+        .gps-subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; padding: 15px 5px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted); gap: 15px; }
+
+        /* --- MEDIA QUERIES PARA RESPONSIVIDADE EM CELULARES --- */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .top-bar { flex-direction: column; text-align: center; padding: 15px; gap: 12px; }
+            .status-container { justify-content: center; width: 100%; }
+            
+            .main-grid { grid-template-columns: 1fr; gap: 15px; }
+            .panel-card { grid-column: span 1 !important; grid-row: span 1 !important; padding: 15px; }
+            
+            .primary-value { font-size: 46px; }
+            .gps-subgrid { grid-template-columns: 1fr; gap: 0; }
+            .footer { flex-direction: column; text-align: center; gap: 10px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>THUNDER-XVI — DASHBOARD</h1>
-    </div>
-
-    <div class="grid">
-        <!-- AMBIENTE -->
-        <div class="card">
-            <h2>[Ambiente]</h2>
-            <div class="data-row"><span class="label">Altitude:</span><span class="value highlight" id="alt">0.00</span><span class="label"> m</span></div>
-            <div class="data-row"><span class="label">Pressão:</span><span class="value" id="pres">0.00</span><span class="label"> Pa</span></div>
-            <div class="data-row"><span class="label">Temperatura:</span><span class="value" id="temp">0.0</span><span class="label"> °C</span></div>
-        </div>
-
-        <!-- ACELERÔMETRO -->
-        <div class="card">
-            <h2>[Acelerômetro] (m/s²)</h2>
-            <div class="data-row"><span class="label">Eixo X:</span><span class="value" id="ax">0.00</span></div>
-            <div class="data-row"><span class="label">Eixo Y:</span><span class="value" id="ay">0.00</span></div>
-            <div class="data-row"><span class="label">Eixo Z:</span><span class="value highlight-blue" id="az">0.00</span></div>
-        </div>
-
-        <!-- GIROSCÓPIO -->
-        <div class="card">
-            <h2>[Giroscópio] (rad/s)</h2>
-            <div class="data-row"><span class="label">GX:</span><span class="value" id="gx">0.00</span></div>
-            <div class="data-row"><span class="label">GY:</span><span class="value" id="gy">0.00</span></div>
-            <div class="data-row"><span class="label">GZ:</span><span class="value" id="gz">0.00</span></div>
-        </div>
-
-        <!-- GPS -->
-        <div class="card">
-            <h2>[GPS]</h2>
-            <div class="data-row"><span class="label">Latitude:</span><span class="value" id="lat">0.000000</span></div>
-            <div class="data-row"><span class="label">Longitude:</span><span class="value" id="lon">0.000000</span></div>
+    <!-- Barra de Controle Superior -->
+    <div class="top-bar">
+        <h1>THUNDER-XVI <span>// TELEMETRY CORE</span></h1>
+        <div class="status-container">
+            <div class="status-item">
+                <div class="pulse-dot"></div>
+                <span>RX STREAM ACTIVE</span>
+            </div>
         </div>
     </div>
 
+    <!-- Layout Modular Grid -->
+    <div class="main-grid">
+        
+        <!-- CARD 1: PERFIL DE ALTITUDE (COM TARA) -->
+        <div class="panel-card" style="grid-row: span 2;">
+            <div class="card-header">
+                <h2>Métrica de Voo Primária</h2>
+                <button class="tare-button" id="btn-tare-alt">Zerar Alt.</button>
+            </div>
+            <div class="primary-display">
+                <div class="primary-value" id="alt">0.00</div>
+                <div class="primary-unit">Altitude Relativa (Metros)</div>
+            </div>
+            <div>
+                <div class="metric-row">
+                    <span class="metric-label">Pressão Atmosférica</span>
+                    <span class="metric-value"><span id="pres">0.00</span> <small style="color:var(--text-muted); font-size:11px;">Pa</small></span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Temperatura do Core</span>
+                    <span class="metric-value"><span id="temp">0.0</span> <small style="color:var(--text-muted); font-size:11px;">°C</small></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 2: DINÂMICA INERCIAL (ACELERÔMETRO) -->
+        <div class="panel-card">
+            <div class="card-header">
+                <h2>Aceleração Linear (m/s²)</h2>
+            </div>
+            <div class="vector-grid">
+                <div class="vector-box"><span class="vector-axis">EIXO X</span><span class="vector-num" id="ax">0.00</span></div>
+                <div class="vector-box"><span class="vector-axis">EIXO Y</span><span class="vector-num" id="ay">0.00</span></div>
+                <div class="vector-box"><span class="vector-axis" style="color:var(--neon-blue);">EIXO Z</span><span class="vector-num" style="color:var(--neon-blue);" id="az">0.00</span></div>
+            </div>
+        </div>
+
+        <!-- CARD 3: VELOCIDADE ANGULAR (GIROSCÓPIO) -->
+        <div class="panel-card">
+            <div class="card-header">
+                <h2>Giroscópio Dinâmico (rad/s)</h2>
+            </div>
+            <div class="vector-grid">
+                <div class="vector-box"><span class="vector-axis">VEL. GX</span><span class="vector-num" id="gx">0.00</span></div>
+                <div class="vector-box"><span class="vector-axis">VEL. GY</span><span class="vector-num" id="gy">0.00</span></div>
+                <div class="vector-box"><span class="vector-axis">VEL. GZ</span><span class="vector-num" id="gz">0.00</span></div>
+            </div>
+        </div>
+
+        <!-- CARD 4: COORDENADAS GEOFÍSICAS (GPS) -->
+        <div class="panel-card" style="grid-column: span 2;">
+            <div class="card-header">
+                <h2>Mapeamento de Coordenadas GPS</h2>
+            </div>
+            <div class="gps-subgrid">
+                <div class="metric-row">
+                    <span class="metric-label">Latitude Global</span>
+                    <span class="metric-value" style="color: var(--neon-green);" id="lat">0.000000</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-row-mobile metric-row"></span>
+                    <span class="metric-label">Longitude Global</span>
+                    <span class="metric-value" style="color: var(--neon-green);" id="lon">0.000000</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Rodapé Técnico -->
     <div class="footer">
-        <div>RSSI: <span id="rssi" style="color:#ef4444; font-weight:bold;">0</span> dBm</div>
-        <div>Pacotes Recebidos: <span id="count" style="color:#f59e0b; font-weight:bold;">0</span></div>
+        <div>NÍVEL DE SINAL (RSSI): <span id="rssi" style="color: var(--neon-blue); font-weight: bold;">0</span> dBm</div>
+        <div>PACOTES PROCESSADOS: <span id="count" style="color: var(--neon-green); font-weight: bold;">0</span></div>
     </div>
 
     <script>
-        // Requisições assíncronas em background a cada 250ms (Tempo real sem piscar a tela)
+        let tareAltitude = 0;
+        let currentRawAltitude = 0;
+
+        // Evento para capturar e aplicar a tara de altitude no cliente browser
+        document.getElementById('btn-tare-alt').addEventListener('click', function() {
+            tareAltitude = currentRawAltitude;
+        });
+
         setInterval(function() {
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('alt').innerText = data.alt;
+                    // Armazena valor bruto para possibilitar calculo da tara continuo
+                    currentRawAltitude = parseFloat(data.alt) || 0.0;
+                    let displayAltitude = currentRawAltitude - tareAltitude;
+
+                    // Atualizacoes textuais estruturadas
+                    document.getElementById('alt').innerText = displayAltitude.toFixed(2);
                     document.getElementById('pres').innerText = data.pres;
                     document.getElementById('temp').innerText = data.temp;
                     document.getElementById('ax').innerText = data.ax;
@@ -109,14 +223,13 @@ const char HTML_DASHBOARD[] PROGMEM = R"rawliteral(
                     document.getElementById('rssi').innerText = data.rssi;
                     document.getElementById('count').innerText = data.count;
                 })
-                .catch(err => console.log("Erro de conexão: ", err));
+                .catch(err => console.log("Erro de comunicacao interna: ", err));
         }, 250);
     </script>
 </body>
 </html>
 )rawliteral";
 
-// Função auxiliar para separar a string por vírgulas
 String getValue(String data, char separator, int index) {
   int found = 0;
   int strIndex[] = {0, -1};
@@ -128,16 +241,16 @@ String getValue(String data, char separator, int index) {
       strIndex[1] = (i == maxIndex) ? i + 1 : i;
     }
   }
-  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+  String res = found > index ? data.substring(strIndex[0], strIndex[1]) : "";
+  res.trim();
+  return res;
 }
 
-// Rotas de resposta do Servidor Web
 void handleRoot() {
   server.send(200, "text/html", HTML_DASHBOARD);
 }
 
 void handleData() {
-  // Envia os dados em formato JSON leve para a página
   String json = "{";
   json += "\"alt\":\"" + alt + "\",";
   json += "\"pres\":\"" + pres + "\",";
@@ -159,61 +272,37 @@ void handleData() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("\n[Boot] ESP32 acordou com sucesso!");
+  Serial.println("\n[Boot] ESP32 Core v3.2.0 Inicializado!");
 
-  // Inicialização do barramento SPI e LoRa
   SPI.begin(18, 19, 13, 5); 
   LoRa.setPins(csPin, resetPin, irqPin);
 
-  Serial.println("[LoRa] Tentando iniciar...");
   if (!LoRa.begin(433E6)) {
-    Serial.println("[Erro] Falha ao iniciar o LoRa!");
-    delay(300);
-    if (!LoRa.begin(433E6)) {
-      Serial.println("[Erro Definitivo] Hardware LoRa não responde.");
-      while (1);
-    }
+    Serial.println("[Erro] Falha no modulo LoRa!");
+    while (1);
   }
 
-  Serial.println("[LoRa] Iniciado com sucesso!");
-  delay(200);
-
-  // Configuração do Wi-Fi do ESP32 como Ponto de Acesso (Gerador de Rede)
-  Serial.println("[Wi-Fi] Criando rede para o Dashboard...");
   WiFi.softAP(ssid, password);
   
-  IPAddress IP = WiFi.softAPIP();
-  Serial.print("[Wi-Fi] Rede criada: ");
-  Serial.println(ssid);
-  Serial.print("[Web] Acesse no navegador pelo IP: ");
-  Serial.println(IP); // Padrão: 192.168.4.1
-
-  // Configuração das rotas de navegação
   server.on("/", handleRoot);
   server.on("/data", handleData);
   server.begin();
 
-  Serial.println("[Sistema] Pronto. Aguardando pacotes LoRa...");
+  Serial.println("[Online] Painel Responsivo pronto para dispositivos moveis.");
 }
 
 void loop() {
-  // Mantém as conexões e requisições do Servidor Web ativas
   server.handleClient();
 
-  // Escuta o rádio LoRa
   int packetSize = LoRa.parsePacket();
-  
   if (packetSize) {
     count++; 
     String rawData = "";
-    
     while (LoRa.available()) {
       rawData += (char)LoRa.read();
     }
+    rawData.trim(); 
 
-    rawData.trim();
-
-    // Salva nas variáveis globais (alimenta o JSON do Servidor Web)
     alt  = getValue(rawData, ',', 0);
     pres = getValue(rawData, ',', 1);
     temp = getValue(rawData, ',', 2);
@@ -226,28 +315,5 @@ void loop() {
     lat  = getValue(rawData, ',', 9);
     lon  = getValue(rawData, ',', 10);
     lora_rssi = String(LoRa.packetRssi());
-
-    // Remonta o painel visual direto no monitor serial do PC
-    String painel = "====================================\n";
-    painel += "          THUNDER-XVI - TELEMETRIA  \n";
-    painel += "====================================\n";
-    painel += "  [AMBIENTE]\n";
-    painel += "  Altitude:    " + alt + " m\n";
-    painel += "  Pressao:     " + pres + " Pa\n";
-    painel += "  Temperatura: " + temp + " C\n";
-    painel += "------------------------------------\n";
-    painel += "  [ACELEROMETRO] (m/s2)\n";
-    painel += "  AX: " + ax + " | AY: " + ay + " | AZ: " + az + "\n";
-    painel += "------------------------------------\n";
-    painel += "  [GIROSCOPIO] (rad/s)\n";
-    painel += "  GX: " + ogx + " | GY: " + ogy + " | GZ: " + ogz + "\n";
-    painel += "------------------------------------\n";
-    painel += "  [GPS]\n";
-    painel += "  Latitude:  " + lat + "\n";
-    painel += "  Longitude: " + lon + "\n";
-    painel += "====================================\n";
-    painel += "RSSI: " + lora_rssi + " | Pacote: " + String(count) + "\n\n";
-
-    Serial.print(painel);
   }
 }
