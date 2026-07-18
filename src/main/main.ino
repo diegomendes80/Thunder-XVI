@@ -43,13 +43,13 @@ float gx, gy, gz;
 
 void setup() {
   Serial.begin(115200);
-  delay(1000); 
+  delay(1000);
 
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
 
   Wire.begin(SDA, SCL);
-  // Wire.setClock(100000); 
+  // Wire.setClock(100000);
 
   initBMP();
   initMPU();
@@ -61,15 +61,14 @@ void setup() {
 
   servo.attach(4);
 
+  
+
   // SerialBT.begin("Receptor_ESP32");
-  Serial.println("Bluetooth iniciado! Já pode parear no celular.");
+  // Serial.println("Bluetooth iniciado! Já pode parear no celular.");
 }
 
 void loop() {
-  // delay(100);
-  // servo.write(180);
-  //As variáveis são atualizadas a cada loop
-  getPosition(position);  // atualiza o vetor de coordenadas
+  getPosition(position);  
   temperature = getTemperature();
   pressure = getPressure();
   altitude = getAltitude();
@@ -80,34 +79,17 @@ void loop() {
   gy = getGyro('y');
   gz = getGyro('z');
 
-  String telemetria = "====================================\n";
-  telemetria += "          THUNDER-XVI - TELEMETRIA  \n";
-  telemetria += "====================================\n";
-  telemetria += "  [AMBIENTE]\n";
-  telemetria += "  Altitude:    " + String(altitude, 2) + " m\n";
-  telemetria += "  Pressao:     " + String(pressure, 2) + " Pa\n";
-  telemetria += "  Temperatura: " + String(temperature, 1) + " C\n";
-  telemetria += "------------------------------------\n";
-  telemetria += "  [ACELEROMETRO] (m/s2)\n";
-  telemetria += "  AX: " + String(acx, 2) + " | AY: " + String(acy, 2) + " | AZ: " + String(acz, 2) + "\n";
-  telemetria += "------------------------------------\n";
-  telemetria += "  [GIROSCOPIO] (rad/s)\n";
-  telemetria += "  GX: " + String(gx, 2) + " | GY: " + String(gy, 2) + " | GZ: " + String(gz, 2) + "\n";
-  telemetria += "------------------------------------\n";
-  telemetria += "  [GPS]\n";
-  telemetria += "  Latitude:  " + String(position[0], 6) + "\n";
-  telemetria += "  Longitude: " + String(position[1], 6) + "\n";
-  telemetria += "====================================\n\n";
+  // Criamos uma string ultra compacta para o rádio aceitar (Ex: "8.01,101503.5,34.0...")
+  String dadosCompactos = String(altitude, 2) + "," + String(pressure, 2) + "," + String(temperature, 1) + ","
+                        + String(acx, 2) + "," + String(acy, 2) + "," + String(acz, 2) + ","
+                        + String(gx, 2) + "," + String(gy, 2) + "," + String(gz, 2) + ","
+                        + String(position[0], 6) + "," + String(position[1], 6);
 
-  Serial.print(telemetria);
-  // SerialBT.print(telemetria);
-  sendData(telemetria);
-  // if(isFalling()){
-  //   Serial.println("Caindo");
-  //   SerialBT.println("Caindo");
-  // }
+  // No Serial Monitor do TX, você ainda pode ver o texto completo se quiser:
+  Serial.println("Enviando via LoRa (Compactado): " + dadosCompactos);
+  
+  // Envia os dados leves pelo rádio
+  sendData(dadosCompactos);
 
-
-  delay(200);
-  // servo.write(0);
+  delay(1000); 
 }

@@ -19,12 +19,13 @@ void initLoRa(){
     }
   }
 
-  LoRa.setSpreadingFactor(9); //testando primeiro com 9. com 7 (padrão) conseguimos ~280 m com -108 RSSI
+  // LoRa.setSpreadingFactor(9); //testando primeiro com 9. com 7 (padrão) conseguimos ~280 m com -108 RSSI
 
   Serial.println("LoRa Iniciado");
 }
 
 void sendData(String data){
+  
   Serial.println("Enviando pacote");
 
   //inicia o pacote
