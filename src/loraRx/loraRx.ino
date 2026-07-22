@@ -4,14 +4,17 @@
 #include <WebServer.h>
 
 const char* ssid = "Thunder_XVI_Painel";
-const char* password = "thunderrocket"; 
+const char* password = "thunderrocket";
 
 WebServer server(80);
 
-const int csPin = 5;          
-const int resetPin = 22;      
-const int irqPin = 32;    
-int count = 0;     
+const int csPin = 5;
+const int resetPin = 22;
+const int irqPin = 32;
+int count = 0;
+const int redLed = 27;
+const int yellowLed = 26;
+const int greenLed = 25;
 
 String alt = "0.0", pres = "0.0", temp = "0.0";
 String ax = "0.0", ay = "0.0", az = "0.0";
@@ -232,7 +235,7 @@ const char HTML_DASHBOARD[] PROGMEM = R"rawliteral(
 
 String getValue(String data, char separator, int index) {
   int found = 0;
-  int strIndex[] = {0, -1};
+  int strIndex[] = { 0, -1 };
   int maxIndex = data.length() - 1;
   for (int i = 0; i <= maxIndex && found <= index; i++) {
     if (data.charAt(i) == separator || i == maxIndex) {
@@ -269,21 +272,43 @@ void handleData() {
   server.send(200, "application/json", json);
 }
 
+void turnOnLed(int ledParaLigar) {
+  int leds[] = { redLed, yellowLed, greenLed };
+
+  for (int l : leds) {
+    if (l == ledParaLigar) {
+      digitalWrite(l, HIGH);
+    } else {
+      digitalWrite(l, LOW);
+    }
+  }
+}
 void setup() {
+
   Serial.begin(115200);
   delay(200);
   Serial.println("\n[Boot] ESP32 Core v3.2.0 Inicializado!");
 
-  SPI.begin(18, 19, 13, 5); 
+  pinMode(redLed, OUTPUT);
+  digitalWrite(redLed, LOW);
+  pinMode(yellowLed, OUTPUT);
+  digitalWrite(yellowLed, LOW);
+  pinMode(greenLed, OUTPUT);
+  digitalWrite(greenLed, LOW);
+
+  SPI.begin(18, 19, 13, 5);
   LoRa.setPins(csPin, resetPin, irqPin);
 
   if (!LoRa.begin(433E6)) {
     Serial.println("[Erro] Falha no modulo LoRa!");
-    while (1);
+    turnOnLed(redLed);
+
+    while (1)
+      ;
   }
 
   WiFi.softAP(ssid, password);
-  
+
   server.on("/", handleRoot);
   server.on("/data", handleData);
   server.begin();
@@ -296,24 +321,36 @@ void loop() {
 
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    count++; 
+
+    count++;
     String rawData = "";
     while (LoRa.available()) {
       rawData += (char)LoRa.read();
     }
-    rawData.trim(); 
 
-    alt  = getValue(rawData, ',', 0);
+    rawData.trim();
+
+    int rssiVal = LoRa.packetRssi();
+    lora_rssi = String(rssiVal);
+
+  
+    if (abs(rssiVal) > 100) {      
+      turnOnLed(yellowLed); // Sinal fraco
+    } else {
+      turnOnLed(greenLed);  // Sinal bom
+    }
+
+    alt = getValue(rawData, ',', 0);
     pres = getValue(rawData, ',', 1);
     temp = getValue(rawData, ',', 2);
-    ax   = getValue(rawData, ',', 3);
-    ay   = getValue(rawData, ',', 4);
-    az   = getValue(rawData, ',', 5);
-    ogx  = getValue(rawData, ',', 6);
-    ogy  = getValue(rawData, ',', 7);
-    ogz  = getValue(rawData, ',', 8);
-    lat  = getValue(rawData, ',', 9);
-    lon  = getValue(rawData, ',', 10);
-    lora_rssi = String(LoRa.packetRssi());
+    ax = getValue(rawData, ',', 3);
+    ay = getValue(rawData, ',', 4);
+    az = getValue(rawData, ',', 5);
+    ogx = getValue(rawData, ',', 6);
+    ogy = getValue(rawData, ',', 7);
+    ogz = getValue(rawData, ',', 8);
+    lat = getValue(rawData, ',', 9);
+    lon = getValue(rawData, ',', 10);
+    
   }
 }

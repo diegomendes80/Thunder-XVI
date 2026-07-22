@@ -24,18 +24,13 @@ float getGyro(char axis);
 float getTemperature();
 float getPressure();
 float getAltitude();
-
-//CONFIGURAÇÕES DO BLUETOOTH:
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-#endif
-
-BluetoothSerial SerialBT;
-Servo servo;
+void logTelemetryToFlash(String telemetryPacket);
+void dumpFlashTelemetry();
+void eraseChipFull();
 
 
 //VARIAVEIS ------:
-float temperature, pressure, altitude;
+float temperature = 0, pressure = 0, altitude = 0;
 double position[2];
 float acx, acy, acz;
 float gx, gy, gz;
@@ -59,16 +54,15 @@ void setup() {
   SPI.begin(SCK, MOSI, MISO, csPin);
   initLoRa();
 
-  servo.attach(4);
+  // servo.attach(4);
 
-  
-
-  // SerialBT.begin("Receptor_ESP32");
-  // Serial.println("Bluetooth iniciado! Já pode parear no celular.");
+  // ATENÇÃO - OPÇÕES DE CONTROLE DA MEMÓRIA FLASH ======================================
+  // dumpFlashTelemetry();  //DESCOMENTE PARA LER O QUE JÁ ESTÁ GRAVADO
+  // eraseChipFull(); // DESCOMENTE PARA APAGAR TODA A MEMÓRIA
 }
 
 void loop() {
-  getPosition(position);  
+  getPosition(position);
   temperature = getTemperature();
   pressure = getPressure();
   altitude = getAltitude();
@@ -87,9 +81,11 @@ void loop() {
 
   // No Serial Monitor do TX, você ainda pode ver o texto completo se quiser:
   Serial.println("Enviando via LoRa (Compactado): " + dadosCompactos);
-  
+
+  logTelemetryToFlash(dadosCompactos); //DESCOMENTE PARA HABILITAR A GRAVAÇÃO NA MEMÓRIA 
+
   // Envia os dados leves pelo rádio
   sendData(dadosCompactos);
 
-  delay(1000); 
+  delay(1000);
 }
