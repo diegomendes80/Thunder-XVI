@@ -7,7 +7,7 @@ bool falling;
 
 Adafruit_MPU6050 mpu; 
 
-
+// Varre todas as portas lógicas de comunicação para ver se há algum dispositivo conectado
 void scanI2C() {
   Serial.println("\n--- SCAN I2C ---");
   for (byte i = 1; i < 127; i++) {
@@ -19,6 +19,7 @@ void scanI2C() {
   }
 }
 
+// Faz o reconhecimento do MPU6050 para saber se há comunicação
 void testMPURaw() {
   Serial.println("\n--- TESTE DIRETO MPU ---");
 
@@ -36,6 +37,7 @@ void testMPURaw() {
   }
 }
 
+// Esse comando reseta o MPU6050 para que ele comece a medir.
 // ===== RESET MPU =====
 void resetMPU() {
   Serial.println("\nResetando MPU...");
@@ -55,6 +57,8 @@ void resetMPU() {
   delay(200);
 }
 
+// Esse comando tem como função, iniciar o escaneamento das portas lógicas, resetar o sensor, testar o chip, 
+// e inicar a biblioteca do MPU para a leitura dos dados. 
 void initMPU() {
 
   delay(2000);
@@ -74,7 +78,9 @@ void initMPU() {
   }
 }
 
-//em m/s
+// Retorna a aceleração em metros por segundo ao quadrado (m/s²). 
+// Ele lê os eixos informados('x', 'y' ou 'z') e informa o valor correspondente em m/s².
+// O comando mpu.getEvent(&a, &g, &temp), lê os dados atuais do sensor, aceleração atual (a), rotação (g) e temperatura (temp).
 float getAcceleration(char axis){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); // Lê os dados atuais do sensor
@@ -87,7 +93,8 @@ float getAcceleration(char axis){
   }
 }
 
-//em rad/s
+// informa a velocidade de rotação do giroscópio em radianos por segundo (rad/s).
+float getGyro(char axis){
 float getGyro(char axis){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp); // Lê os dados atuais do sensor
@@ -101,7 +108,9 @@ float getGyro(char axis){
   }
 }
 
-//ângulo em graus
+// CALCULO DE INCLINAÇÃO
+// Ao inclinar o sensor, a gravidade se divide entre os eixos X, Y e Z. 
+// A fomula pictch e roll descobre o ângulo exato de inclinação baseado nessa divisão ângulo em graus.
 float getAngle(char type){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
@@ -117,6 +126,8 @@ float getAngle(char type){
   return 0.0;
 }
 
+// Quando o foquete estiver em queda livre, sua a aceleração vertival é menor que 1,96 m/s².
+// Essa condição da aceleração vertical deve durar por mais de 100 milissegundos, para o codigo assumir a queda livre.
 bool isFalling(){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
