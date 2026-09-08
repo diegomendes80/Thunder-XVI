@@ -34,7 +34,8 @@ float temperature = 0, pressure = 0, altitude = 0;
 double position[2];
 float acx, acy, acz;
 float gx, gy, gz;
-
+Servo servo;
+bool rocketFalling = false;
 
 void setup() {
   Serial.begin(115200);
@@ -54,7 +55,7 @@ void setup() {
   SPI.begin(SCK, MOSI, MISO, csPin);
   initLoRa();
 
-  // servo.attach(4);
+  servo.attach(4);
 
   // ATENÇÃO - OPÇÕES DE CONTROLE DA MEMÓRIA FLASH ======================================
   // dumpFlashTelemetry();  //DESCOMENTE PARA LER O QUE JÁ ESTÁ GRAVADO
@@ -72,6 +73,11 @@ void loop() {
   gx = getGyro('x');
   gy = getGyro('y');
   gz = getGyro('z');
+
+
+  rocketFalling = isFalling();
+  Serial.println("Está caindo: " + rocketFalling);
+  rocketFalling ? servo.write(0) : servo.write(40);
 
   // Criamos uma string ultra compacta para o rádio aceitar (Ex: "8.01,101503.5,34.0...")
   String dadosCompactos = String(altitude, 2) + "," + String(pressure, 2) + "," + String(temperature, 1) + ","

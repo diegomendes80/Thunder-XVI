@@ -121,7 +121,7 @@ bool isFalling(){
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  float aceleracaoVertical = abs(a.acceleration.x);
+  float aceleracaoVertical = abs(a.acceleration.z);
 
   if(aceleracaoVertical > 1.96){
     lastTime = millis();
